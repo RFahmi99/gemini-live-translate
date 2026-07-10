@@ -1,0 +1,33 @@
+{
+  "name": "gemini-live-translate-livekit",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "concurrently --kill-others-on-fail -n web,agent -c blue,magenta \"pnpm run dev:web\" \"pnpm run dev:agent\"",
+    "dev:web": "next dev",
+    "dev:agent": "cd translator && uv run python src/agent.py dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.21",
+    "@livekit/components-styles": "^1.2.0",
+    "livekit-client": "^2.19.0",
+    "livekit-server-sdk": "^2.15.2",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^10.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "typescript": "^5"
+  }
+}
