@@ -30,6 +30,8 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: "nl", name: "Dutch", flag: "🇳🇱" },
   { code: "pl", name: "Polish", flag: "🇵🇱" },
   { code: "sv", name: "Swedish", flag: "🇸🇪" },
+  { code: "bn", name: "Bangla", flag: "🇧🇩" },
+  { code: "ms", name: "Malay", flag: "🇲🇾" }
 ];
 
 /** Options shown in the pre-flight language picker. */
