@@ -99,7 +99,7 @@ export default function RoomClient({ sessionId }: { sessionId: string }) {
     );
   }
 
-  return (
+return (
     <LiveKitRoom
       token={token}
       serverUrl={serverUrl}
@@ -107,6 +107,8 @@ export default function RoomClient({ sessionId }: { sessionId: string }) {
       video={false}
       audio={false}
       connect={true}
+      // Disable autoSubscribe so custom hook can manually route tracks
+      connectOptions={{ autoSubscribe: false }}
       onDisconnected={handleLeave}
       data-lk-theme="default"
       style={{ height: "100vh", background: "var(--bg)" }}
