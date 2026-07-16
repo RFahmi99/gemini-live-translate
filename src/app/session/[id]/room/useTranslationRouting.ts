@@ -31,18 +31,7 @@ function parseTranslationTrackName(
 
 /**
  * Subscribes/unsubscribes to audio tracks based on the listener's chosen
- * language. Encodes the routing predicate from grill Q8:
- *
- *   for each remote participant P (human or agent):
- *     - if P is human and (myLang === 'none' OR P.lang === myLang):
- *         subscribe to mic; never subscribe to a translator track for P
- *     - if P is human and P.lang !== myLang:
- *         unsubscribe from mic; the agent's translator track will cover us
- *     - if P is the agent:
- *         for each of P's audio tracks:
- *           subscribe iff target_lang === myLang AND
- *                        source_identity belongs to a peer whose lang !== myLang
- *           else unsubscribe
+ * language.
  */
 export function useTranslationRouting(myLang: string) {
   const room = useRoomContext();
@@ -51,8 +40,12 @@ export function useTranslationRouting(myLang: string) {
     if (!room) return;
 
     const apply = () => {
+      // 1. Grab the local participant's identity to prevent self-echo
+      const localIdentity = room.localParticipant.identity;
+      
       const remotes = Array.from(room.remoteParticipants.values());
       const peerLangs = new Map<string, string | undefined>();
+      
       for (const p of remotes) {
         if (p.kind === ParticipantKind.AGENT) continue;
         peerLangs.set(p.identity, p.attributes?.[PARTICIPANT_LANG_ATTR]);
@@ -60,7 +53,8 @@ export function useTranslationRouting(myLang: string) {
 
       for (const p of remotes) {
         if (p.kind === ParticipantKind.AGENT) {
-          applyAgentSubscriptions(p, myLang, peerLangs);
+          // Pass localIdentity down into the agent subscription logic
+          applyAgentSubscriptions(p, myLang, peerLangs, localIdentity);
         } else {
           applyHumanSubscriptions(p, myLang);
         }
@@ -102,6 +96,7 @@ function applyAgentSubscriptions(
   agent: RemoteParticipant,
   myLang: string,
   peerLangs: Map<string, string | undefined>,
+  localIdentity: string // Added to the signature
 ) {
   for (const pub of agent.audioTrackPublications.values()) {
     const parsed = parseTranslationTrackName(pub.trackName);
@@ -110,15 +105,26 @@ function applyAgentSubscriptions(
       continue;
     }
 
+    // RULE 1: Never subscribe to the translation of your own voice
+    if (parsed.sourceIdentity === localIdentity) {
+      setSubscribed(pub, false);
+      continue;
+    }
+
+    // RULE 2: If we want native audio only, reject all agent tracks
     if (myLang === NATIVE_LANG) {
       setSubscribed(pub, false);
       continue;
     }
 
+    // RULE 3: Ensure the translation track is strictly for my selected language
     const matchesMe = parsed.targetLang === myLang;
+    
+    // RULE 4: Ensure the original speaker doesn't already speak my language natively
     const speakerLang = peerLangs.get(parsed.sourceIdentity);
     const speakerNotMyLang = speakerLang !== myLang;
 
+    // Apply strict filtering
     setSubscribed(pub, matchesMe && speakerNotMyLang);
   }
 }
