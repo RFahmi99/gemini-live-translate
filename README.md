@@ -1,23 +1,3 @@
-# Live Translate
-
-Multi-language video calls. Everyone picks their language. Translation spins up on demand.
-
-Powered by [LiveKit Agents](https://docs.livekit.io/agents/) (Python worker) and the [Gemini Live API](https://ai.google.dev/gemini-api/docs/live).
-
-![architecture](https://img.shields.io/badge/architecture-peer--call-1A1917) ![agent](https://img.shields.io/badge/agent-python-3776AB) ![web](https://img.shields.io/badge/web-nextjs-000000)
-
----
-
-## What it does
-
-Anyone with the link joins as a peer. Each participant picks one language — that's what they speak **and** what they want to hear everyone else in. When someone speaks, a Gemini Live session translates their audio into every other distinct language present in the room, on demand. Same-language pairs hear each other natively, no Gemini cost.
-
-- 8-person rooms by default (configurable)
-- 16 supported languages plus "None — native passthrough"
-- Camera + mic default off; toggle on when you're ready
-- Captions sidebar (per listener, in their chosen language) with auto-scroll transcripts
-- LiveKit Cloud Agents-ready: deploy the Python worker, the frontend dispatches it via room config on token mint
-
 ## How it works
 
 ```mermaid
@@ -81,7 +61,7 @@ gemini-live-translate-livekit/
 │   │           ├── CaptionsSidebar.tsx
 │   │           └── useTranslationRouting.ts
 │   └── lib/
-│       ├── languages.ts                # 16 languages + "none" sentinel
+│       ├── languages.ts                # 16 languages + "none" sentinel (Configurable)
 │       └── config.ts                   # Caps, attribute keys
 └── translator/                         # Python LiveKit Agents worker
     ├── src/
@@ -136,6 +116,38 @@ Caps in `src/lib/config.ts` and `translator/src/config.py` — adjust together:
 - **Typography** — Instrument Serif (display), DM Sans (body), DM Mono (status)
 - **Package management** — `pnpm` + `uv`
 
-## License
+## LiveKit Room Setting Changes
 
-MIT
+### 1. `RoomClient.tsx` — manual track subscription
+
+`autoSubscribe` is turned off in `connectOptions`:
+
+```tsx
+<LiveKitRoom
+  ...
+  connectOptions={{ autoSubscribe: false }}
+  ...
+/>
+```
+
+By default, LiveKit auto-subscribes every participant to every published track. That doesn't work here because the translator agent publishes **multiple audio tracks per speaker** (one `tx:<speaker>:<target_lang>` track for each active target language). If auto-subscribe were left on, every client would pull down every translation track for every language pair, not just their own. Disabling it hands control over to `useTranslationRouting.ts`, which decides — per participant — which tracks are worth subscribing to.
+
+### 2. `useTranslationRouting.ts` — `applyAgentSubscriptions`
+
+This new function runs the actual subscription logic whenever the agent's published tracks or the room's language attributes change. It takes the agent participant, the local user's chosen language (`myLang`), a map of every peer's language (`peerLangs`), and the local user's own identity — then walks each of the agent's audio tracks and decides whether to subscribe.
+
+For every agent-published audio track:
+
+1. **Skip non-translation tracks.** `parseTranslationTrackName` tries to parse the track name as `tx:<speaker>:<target_lang>`. If it doesn't match that pattern (e.g. it's some other agent state/audio track), the function leaves it alone entirely — no subscribe/unsubscribe call.
+
+2. **Rule 1 — Never hear your own translated voice.** If the track's source speaker is the local user themself, unsubscribe. You don't need a translation of what you just said.
+
+3. **Rule 2 — "Native language" listeners get no translation tracks.** If the user has selected `NATIVE_LANG` (i.e., "listen to raw audio only, no translation"), unsubscribe from every agent track, full stop.
+
+4. **Rule 3 — Only your target language.** The track's `target_lang` (parsed from the track name) must equal `myLang`. This filters out translation tracks meant for other listeners in the room.
+
+5. **Rule 4 — Don't translate someone who already speaks your language.** Using `peerLangs`, look up the original speaker's language. If the speaker's language already matches `myLang`, there's no need for a translated version — you'd just be listening to a duplicate/derivative of audio you can already understand natively.
+
+The final subscription decision is `matchesMe && speakerNotMyLang` — the track is only subscribed to if it's both addressed to your language **and** the speaker doesn't already speak that language.
+
+**Net effect:** each client ends up subscribed to exactly one stream per peer — either that peer's raw mic (if same language) or their `tx:<peer>:<myLang>` translation track — instead of the default flood of every track the agent publishes.
