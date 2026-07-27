@@ -41,6 +41,3 @@ SESSION_GRACE_SEC = 10.0
 # Exponential backoff schedule for reconnecting a failed Gemini session.
 GEMINI_RECONNECT_BACKOFF_SEC = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 30.0]
 GEMINI_MAX_FAILURES_BEFORE_LONG_BACKOFF = 5
-
-# Set a safe upper bound for tokens generated per turn/session
-GEMINI_MAX_OUTPUT_TOKENS = 16384

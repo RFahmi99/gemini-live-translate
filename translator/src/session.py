@@ -220,7 +220,6 @@ class GeminiSession:
                 "outputAudioTranscription": {},
                 "generationConfig": {
                     "responseModalities": ["AUDIO"],
-                    "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
                     "translationConfig": {
                         "targetLanguageCode": self._target_lang,
                         "echoTargetLanguage": False,
