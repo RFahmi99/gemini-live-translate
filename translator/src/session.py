@@ -26,6 +26,7 @@ from config import (
     GEMINI_MAX_FAILURES_BEFORE_LONG_BACKOFF,
     GEMINI_MODEL,
     GEMINI_RECONNECT_BACKOFF_SEC,
+    GEMINI_MAX_OUTPUT_TOKENS
 )
 
 logger = logging.getLogger("translator.session")
@@ -219,6 +220,7 @@ class GeminiSession:
                 "outputAudioTranscription": {},
                 "generationConfig": {
                     "responseModalities": ["AUDIO"],
+                    "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
                     "translationConfig": {
                         "targetLanguageCode": self._target_lang,
                         "echoTargetLanguage": False,
