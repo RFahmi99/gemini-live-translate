@@ -25,8 +25,7 @@ from config import (
     GEMINI_INPUT_SAMPLE_RATE,
     GEMINI_MAX_FAILURES_BEFORE_LONG_BACKOFF,
     GEMINI_MODEL,
-    GEMINI_RECONNECT_BACKOFF_SEC,
-    GEMINI_MAX_OUTPUT_TOKENS
+    GEMINI_RECONNECT_BACKOFF_SEC
 )
 
 logger = logging.getLogger("translator.session")
